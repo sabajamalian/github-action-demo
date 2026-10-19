@@ -19,12 +19,12 @@ describe('Branch API', () => {
         const newBranch = {
             branchId: 3,
             headquartersId: 1,
-            name: "Eastside Branch",
-            description: "Eastern district branch",
-            address: "321 East St",
-            contactPerson: "Emma Davis",
-            email: "edavis@octo.com",
-            phone: "555-0203"
+            name: 'Eastside Branch',
+            description: 'Eastern district branch',
+            address: '321 East St',
+            contactPerson: 'Emma Davis',
+            email: 'edavis@octo.com',
+            phone: '555-0203'
         };
         const response = await request(app).post('/branches').send(newBranch);
         expect(response.status).toBe(201);
