@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test with coverage
+        run: npm run test:coverage
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-coverage
+          path: api/coverage
+          if-no-files-found: ignore
+
+  style:
+    name: Style checks (ESLint + Prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: Prettier
+        run: npm run format:check
+
+  containers:
+    name: Container build and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build API image
+        run: docker build -f api/Dockerfile -t octacat-api:ci .
+      - name: Build web image
+        run: docker build -f frontend/Dockerfile -t octacat-web:ci .
+      - name: Start containers
+        run: |
+          docker run -d --name api -p 3000:3000 octacat-api:ci
+          docker run -d --name web -p 8080:80 \
+            -e API_HOST=localhost -e API_PORT=3000 -e API_PROTOCOL=http \
+            octacat-web:ci
+      - name: Smoke test
+        env:
+          CURL_OPTS: --fail -sS --retry 10 --retry-delay 2 --retry-all-errors
+        run: |
+          curl $CURL_OPTS http://localhost:3000/api/products | jq -e 'length > 0' > /dev/null
+          curl $CURL_OPTS http://localhost:8080/ | grep -q 'id="root"'
+          curl $CURL_OPTS http://localhost:8080/runtime-config.js | grep -q 'http://localhost:3000'
+      - name: Container logs
+        if: failure()
+        run: |
+          docker logs api
+          docker logs web
