@@ -1,0 +1,84 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-octacat
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  API_APP: octacat-api
+  WEB_APP: octacat-web
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.smoke.outputs.web_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Add Container Apps CLI extension
+        run: az extension add --name containerapp --upgrade --only-show-errors
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Build images
+        run: |
+          docker build -f api/Dockerfile -t "$ACR_NAME.azurecr.io/octacat-api:$IMAGE_TAG" .
+          docker build -f frontend/Dockerfile -t "$ACR_NAME.azurecr.io/octacat-web:$IMAGE_TAG" .
+
+      - name: Push images
+        run: |
+          docker push "$ACR_NAME.azurecr.io/octacat-api:$IMAGE_TAG"
+          docker push "$ACR_NAME.azurecr.io/octacat-web:$IMAGE_TAG"
+
+      - name: Deploy API
+        run: |
+          az containerapp update -g "$RESOURCE_GROUP" -n "$API_APP" \
+            --image "$ACR_NAME.azurecr.io/octacat-api:$IMAGE_TAG" --output none
+
+      - name: Deploy web
+        run: |
+          az containerapp update -g "$RESOURCE_GROUP" -n "$WEB_APP" \
+            --image "$ACR_NAME.azurecr.io/octacat-web:$IMAGE_TAG" --output none
+
+      - name: Smoke test
+        id: smoke
+        run: |
+          API_FQDN=$(az containerapp show -g "$RESOURCE_GROUP" -n "$API_APP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          WEB_FQDN=$(az containerapp show -g "$RESOURCE_GROUP" -n "$WEB_APP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+
+          CURL_OPTS="--fail -sS --retry 12 --retry-delay 5 --retry-all-errors -o /dev/null"
+          curl $CURL_OPTS "https://$API_FQDN/api/products"
+          curl $CURL_OPTS "https://$WEB_FQDN/"
+
+          echo "web_url=https://$WEB_FQDN" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Deployed \`${IMAGE_TAG::7}\` to Azure Container Apps"
+            echo ""
+            echo "- Web: https://$WEB_FQDN"
+            echo "- API docs: https://$API_FQDN/api-docs"
+          } >> "$GITHUB_STEP_SUMMARY"
