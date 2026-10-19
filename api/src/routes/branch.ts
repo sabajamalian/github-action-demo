@@ -157,3 +157,9 @@ router.delete('/:id', (req, res) => {
 });
 
 export default router;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debugPayload(x: any) {
+    console.log('payload', x);
+    return x;
+}
