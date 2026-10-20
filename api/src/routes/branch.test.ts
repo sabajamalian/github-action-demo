@@ -59,6 +59,17 @@ describe('Branch API', () => {
     it('should delete a branch by ID', async () => {
         const response = await request(app).delete('/branches/1');
         expect(response.status).toBe(204);
+        expect(response.text).toBe('');
+
+        const deletedBranch = await request(app).get('/branches/1');
+        expect(deletedBranch.status).toBe(404);
+        expect(deletedBranch.text).toBe('Branch not found');
+
+        const remainingBranches = await request(app).get('/branches');
+        expect(remainingBranches.status).toBe(200);
+        expect(remainingBranches.body).toEqual(
+            seedBranches.filter((branch) => branch.branchId !== 1)
+        );
     });
 
     it('should return 404 for non-existing branch', async () => {
