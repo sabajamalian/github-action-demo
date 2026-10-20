@@ -2,7 +2,7 @@ name: Copilot coding standards review
 
 # Reviews a pull request against .github/coding-standards.md with GitHub Copilot CLI,
 # posts the result as a PR comment, and fails when a standard isn't met.
-# Run it from the Actions tab with the pull request number.
+# Runs automatically on pull requests, or from the Actions tab with a PR number.
 
 on:
   workflow_dispatch:
@@ -11,9 +11,8 @@ on:
         description: Pull request number to review
         required: true
         type: number
-  # Uncomment the pull_request trigger to run this review on every pull request.
-  # pull_request:
-  #   types: [opened, synchronize, reopened, ready_for_review]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read

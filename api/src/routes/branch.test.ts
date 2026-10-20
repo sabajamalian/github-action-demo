@@ -65,4 +65,28 @@ describe('Branch API', () => {
         const response = await request(app).get('/branches/999');
         expect(response.status).toBe(404);
     });
+
+    it('should return 404 when updating a non-existing branch', async () => {
+        const response = await request(app)
+            .put('/branches/999')
+            .send({ ...seedBranches[0], branchId: 999, name: 'Missing Branch' });
+
+        expect(response.status).toBe(404);
+        expect(response.text).toBe('Branch not found');
+
+        const branches = await request(app).get('/branches');
+        expect(branches.status).toBe(200);
+        expect(branches.body).toEqual(seedBranches);
+    });
+
+    it('should return 404 when deleting a non-existing branch', async () => {
+        const response = await request(app).delete('/branches/999');
+
+        expect(response.status).toBe(404);
+        expect(response.text).toBe('Branch not found');
+
+        const branches = await request(app).get('/branches');
+        expect(branches.status).toBe(200);
+        expect(branches.body).toEqual(seedBranches);
+    });
 });

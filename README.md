@@ -21,10 +21,10 @@ The frontend runs at http://localhost:5137 and the API at http://localhost:3000.
 | --- | --- | --- |
 | [CI](.github/workflows/ci.yml) | Pull request | Builds the app, runs tests and style checks, and smoke-tests the containers. |
 | [Deploy to Azure](.github/workflows/deploy.yml) | Push to `main` or manual | Publishes the app to Azure Container Apps. |
-| [Copilot coding standards](.github/workflows/copilot-coding-standards.yml) | Manual | Reviews a pull request against the [coding standards](.github/coding-standards.md) and posts a report. |
+| [Copilot coding standards](.github/workflows/copilot-coding-standards.yml) | Pull request or manual | Reviews a pull request against the [coding standards](.github/coding-standards.md) and posts a report. |
 | [Weekly summary](.github/workflows/weekly-summary.md) | Fridays at 9 AM Central or manual | Creates an issue summarizing repository activity. |
 
-To try the Copilot review, open **Actions > Copilot coding standards > Run workflow** and enter a pull request number. To run the weekly summary, choose **Actions > Weekly repository summary > Run workflow**.
+The Copilot review runs automatically when a same-repository pull request is opened, updated, reopened, or marked ready for review. Fork pull requests are skipped. To run it manually, open **Actions > Copilot coding standards review > Run workflow** and enter a pull request number. To run the weekly summary, choose **Actions > Weekly repository summary > Run workflow**.
 
 The weekly summary's `.lock.yml` is generated from its `.md` source by the [GitHub Agentic Workflows CLI](https://github.com/github/gh-aw).
 
