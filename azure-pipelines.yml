@@ -1,0 +1,24 @@
+# Hypothetical Azure DevOps pipeline that runs the API unit tests.
+# It isn't connected to an Azure DevOps project; it's sample input for
+# converting to a GitHub Actions workflow with `gh actions-importer`.
+
+trigger:
+  - main
+
+pr:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: NodeTool@0
+    displayName: Install Node.js
+    inputs:
+      versionSpec: '22.x'
+
+  - script: npm ci
+    displayName: Install dependencies
+
+  - script: npm test
+    displayName: Run unit tests
